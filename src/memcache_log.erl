@@ -1,4 +1,3 @@
-%% -*-erlang-*-
 %%==============================================================================
 %% Copyright 2013 Jan Henry Nystrom <JanHenryNystrom@gmail.com>
 %%
@@ -17,26 +16,42 @@
 
 %%%-------------------------------------------------------------------
 %%% @doc
-%%%   A Memcached client library
-%%%
-%%%  For more information about Memcached: http://memcached.org/
+%%%   Logging funcionality lib for memcache.
 %%% @end
 %%%
 %% @author Jan Henry Nystrom <JanHenryNystrom@gmail.com>
 %% @copyright (C) 2013, Jan Henry Nystrom <JanHenryNystrom@gmail.com>
 %%%-------------------------------------------------------------------
-{application, memcache,
- [
-  {description, "A Memcached client library"},
-  {vsn, "0.1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib,
-                  jhn
-                 ]},
-  {env, [{pools, [{pool_spec, testing, 6000, 3, [{"127.0.0.1", 2181}]}]},
-         {max_queue_len, 10000}
-        ]},
-  {mod, [memcache_app, no_arg]}
- ]}.
+-module(memcache_log).
+-copyright('Jan Henry Nystrom <JanHenryNystrom@gmail.com>').
+
+%% Library functions
+-export([info/3]).
+
+%% Types
+
+%% Records
+
+%% Defines
+
+%% ===================================================================
+%% Library functions.
+%% ===================================================================
+
+%%--------------------------------------------------------------------
+%% Function: info(Module, Format, Arguments) -> ok.
+%% @doc
+%%   Logs info to the standard error logger.
+%% @end
+%%--------------------------------------------------------------------
+-spec info(atom(), string(), [_]) -> ok.
+%%--------------------------------------------------------------------
+info(Module, Format, Args) ->
+    error_logger:info_msg(
+      io_lib:format("[~p]~p(~p) " ++ Format ++ "~n",
+                    [node(), Module, self() | Args])).
+
+%% ===================================================================
+%% Internal functions.
+%% ===================================================================
+

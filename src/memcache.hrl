@@ -15,28 +15,11 @@
 %% limitations under the License.
 %%==============================================================================
 
-%%%-------------------------------------------------------------------
-%%% @doc
-%%%   A Memcached client library
-%%%
-%%%  For more information about Memcached: http://memcached.org/
-%%% @end
-%%%
-%% @author Jan Henry Nystrom <JanHenryNystrom@gmail.com>
-%% @copyright (C) 2013, Jan Henry Nystrom <JanHenryNystrom@gmail.com>
-%%%-------------------------------------------------------------------
-{application, memcache,
- [
-  {description, "A Memcached client library"},
-  {vsn, "0.1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib,
-                  jhn
-                 ]},
-  {env, [{pools, [{pool_spec, testing, 6000, 3, [{"127.0.0.1", 2181}]}]},
-         {max_queue_len, 10000}
-        ]},
-  {mod, [memcache_app, no_arg]}
- ]}.
+-record(pool_spec, {name :: atom(),
+                    timeout :: timeout(),
+                    size :: pos_integer(),
+                    hosts :: [{string(), non_neg_integer()}]}).
+
+-record(req, {sync = false :: boolean(),
+              from :: undefined | jhn_server:from(),
+              payload :: _}).
