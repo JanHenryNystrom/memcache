@@ -26,9 +26,10 @@
 -copyright('Jan Henry Nystrom <JanHenryNystrom@gmail.com>').
 
 %% Library functions
--export([]).
+-export([storage/5]).
 
 %% Includes
+-include_lib("memcache/src/memcache.hrl").
 
 %% Types
 
@@ -37,10 +38,32 @@
 %% Records
 
 %% Defines
+-define(TERMINATOR, <<"\r\n">>).
 
 %% ===================================================================
 %% Library functions.
 %% ===================================================================
+
+%%--------------------------------------------------------------------
+%% Function: storage(Type, Key, Expiration, Data, OptsRecord) -> IOList
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec storage(atom(), key(), expiration(), data(), #opts{}) -> iolist().
+%%--------------------------------------------------------------------
+storage(Type, Key, Expiration, Data, Opts = #opts{protocol = text}) ->
+    Payload = term_to_binary(Data, [compressed]),
+    [atom_to_binary(Type, latin1),
+     encode_key(Key, text),
+     encode_flags(Opts, text),
+     encode_expiration(Expiration, text),
+     byte_size(Payload),
+     encode_noreply(Opts, text),
+     ?TERMINATOR,
+     Payload,
+     ?TERMINATOR
+     ].
 
 %%--------------------------------------------------------------------
 %% Function: 
@@ -55,3 +78,10 @@
 %% Internal functions.
 %% ===================================================================
 
+encode_key(_, _) -> <<>>.
+
+encode_flags(_, _) -> <<>>.
+
+encode_expiration(_, _) -> <<>>.
+
+encode_noreply(_, _) -> <<>>.

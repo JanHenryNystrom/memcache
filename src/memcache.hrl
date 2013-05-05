@@ -15,6 +15,7 @@
 %% limitations under the License.
 %%==============================================================================
 
+%% Records
 -record(pool_spec, {name :: atom(),
                     timeout :: timeout(),
                     size :: pos_integer(),
@@ -23,3 +24,11 @@
 -record(req, {sync = false :: boolean(),
               from :: undefined | jhn_server:from(),
               payload :: _}).
+
+-record(opts, {protocol = text}).
+
+%% Types
+-type key() :: _.
+-type data() :: _.
+-type expiration() :: _.
+-type opt() :: _.

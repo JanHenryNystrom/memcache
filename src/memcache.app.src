@@ -33,6 +33,7 @@
   {applications, [
                   kernel,
                   stdlib,
+                  crypto,
                   jhn
                  ]},
   {env, [{pools, [{pool_spec, testing, 6000, 3, [{"127.0.0.1", 2181}]}]},
