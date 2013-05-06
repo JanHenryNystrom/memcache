@@ -36,11 +36,12 @@
          replace/4, replace/5,
          append/4, append/5,
          prepend/4, prepend/5,
-         cas/4, cas/5
+         cas/5, cas/6
         ]).
 
-%% %% Retrieval
-%% -export([get/1, gets/2]).
+%% Retrieval
+-export([get/2, get/3,
+         gets/2, gets/3]).
 
 %% %% Other
 %% -export([delete/1,
@@ -223,9 +224,10 @@ prepend(Pool, Key, Expiration, Data, Opts) ->
 %%   Equivalent to cas(Pool, Key, Expiration, Data, []).
 %% @end
 %%--------------------------------------------------------------------
--spec cas(atom(), key(), expiration(), data()) -> ok | {error, _}.
+-spec cas(atom(), key(), expiration(), data(), binary()) -> ok | {error, _}.
 %%--------------------------------------------------------------------
-cas(Pool, Key, Expiration, Data) -> cas(Pool, Key, Expiration, Data, []).
+cas(Pool, Key, Expiration, Data, Unique) ->
+    cas(Pool, Key, Expiration, Data, Unique, []).
 
 %%--------------------------------------------------------------------
 %% Function: cas(Pool, Key, Expiration, Data, Options) -> ok | Error.
@@ -233,15 +235,68 @@ cas(Pool, Key, Expiration, Data) -> cas(Pool, Key, Expiration, Data, []).
 %%   
 %% @end
 %%--------------------------------------------------------------------
--spec cas(atom(), key(), expiration(), data(), [opt()]) -> ok | {error, _}.
+-spec cas(atom(), key(), expiration(), data(), binary(), [opt()]) ->
+          ok | {error, _}.
 %%--------------------------------------------------------------------
-cas(Pool, Key, Expiration, Data, Opts) ->
+cas(Pool, Key, Expiration, Data, Unique, Opts) ->
     OptsRecord = parse_opts(Opts),
-    Request = memcache_protocol:storage(cas, Key, Expiration, Data, OptsRecord),
+    Request = memcache_protocol:cas(Key, Expiration, Data, Unique, OptsRecord),
     memcache_pool_master:request(Pool, Request, OptsRecord).
 
 %% -------------------------------------------------------------------
 %% Retrieval
+%% -------------------------------------------------------------------
+
+%%--------------------------------------------------------------------
+%% Function: get(Pool, Keys) -> {ok, Data} | Error
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec  get(atom(), [key()])-> {ok, data()} | {error, _}.
+%%--------------------------------------------------------------------
+get(Pool, Keys) -> get(Pool, Keys, []).
+
+%%--------------------------------------------------------------------
+%% Function: get(Pool, Keys, Options) -> {ok, Data} | Error
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec  get(atom(), [key()], [opt()])-> {ok, data()} | {error, _}.
+%%--------------------------------------------------------------------
+get(Pool, Keys, Opts) ->
+    OptsRecord = parse_opts(Opts),
+    Request = memcache_protocol:retrieval(get, Keys, OptsRecord),
+    memcache_pool_master:request(Pool, Request, OptsRecord).
+
+%%--------------------------------------------------------------------
+%% Function: gets(Pool, Keys) -> {ok, Data} | Error
+%% @doc
+%%   
+%%   cas is returned.
+%% @end
+%%--------------------------------------------------------------------
+-spec  gets(atom(), [key()])-> {ok, data()} | {error, _}.
+%%--------------------------------------------------------------------
+gets(Pool, Keys) -> gets(Pool, Keys, []).
+
+%%--------------------------------------------------------------------
+%% Function: gets(Pool, Keys, Options) -> {ok, Data} | Error
+%% @doc
+%%   
+%%   cas is returned.
+%% @end
+%%--------------------------------------------------------------------
+-spec  gets(atom(), [key()], [opt()])-> {ok, data()} | {error, _}.
+%%--------------------------------------------------------------------
+gets(Pool, Keys, Opts) ->
+    OptsRecord = parse_opts(Opts),
+    Request = memcache_protocol:retrieval(gets, Keys, OptsRecord),
+    memcache_pool_master:request(Pool, Request, OptsRecord).
+
+%% -------------------------------------------------------------------
+%% Other
 %% -------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
@@ -252,11 +307,6 @@ cas(Pool, Key, Expiration, Data, Opts) ->
 %%--------------------------------------------------------------------
 %-spec  -> .
 %%--------------------------------------------------------------------
-
-
-%% -------------------------------------------------------------------
-%% Other
-%% -------------------------------------------------------------------
 
 %% ===================================================================
 %% Internal functions.
