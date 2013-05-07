@@ -26,7 +26,7 @@
 -copyright('Jan Henry Nystrom <JanHenryNystrom@gmail.com>').
 
 %% Library functions
--export([storage/5, cas/5]).
+-export([storage/5]).
 
 %% Includes
 -include_lib("memcache/src/memcache.hrl").
@@ -38,11 +38,37 @@
 %% Records
 
 %% Defines
--define(TERMINATOR, <<"\r\n">>).
--define(SEPARATOR, <<"\s">>).
-
 -define(REQUEST_MAGIC, 16#80).
 -define(RESPONSE_MAGIC, 16#81).
+
+-define(get, 16#00).
+-define(set, 16#01).
+-define(add, 16#02).
+-define(replace, 16#03).
+-define(delete, 16#04).
+-define(increment, 16#05).
+-define(decrement, 16#06).
+-define(quit, 16#07).
+-define(flush, 16#08).
+-define(getq, 16#09).
+-define(noop, 16#0A).
+-define(version, 16#0B).
+-define(getk, 16#0C).
+-define(getkq, 16#0D).
+-define(append, 16#0E).
+-define(prepend, 16#0F).
+-define(stat, 16#10).
+-define(setq, 16#11).
+-define(addq, 16#12).
+-define(replaceq, 16#13).
+-define(deleteq, 16#14).
+-define(incrementq, 16#15).
+-define(decrementq, 16#16).
+-define(quitq, 16#17).
+-define(flushq, 16#18).
+-define(appendq, 16#19).
+-define(prependq, 16#1A).
+
 
 %% ===================================================================
 %% Library functions.
@@ -56,46 +82,7 @@
 %%--------------------------------------------------------------------
 -spec storage(atom(), key(), expiration(), data(), #opts{}) -> binary().
 %%--------------------------------------------------------------------
-storage(Type, Key, Expiration, Data, Opts = #opts{protocol = text}) ->
-    Payload = term_to_binary(Data, [compressed]),
-    iolist_to_binary(
-      [atom_to_binary(Type, latin1), ?SEPARATOR,
-       encode_key(Key, text), ?SEPARATOR,
-       encode_flags(Opts, text), ?SEPARATOR,
-       encode_expiration(Expiration, text), ?SEPARATOR,
-       byte_size(Payload),
-       encode_noreply(Opts, text),
-       ?TERMINATOR,
-       Payload,
-       ?TERMINATOR
-      ]);
-storage(_Type, Key, _Expiration, _Data, _Opts = #opts{protocol = binary}) ->
-    _EKey = encode_key(Key, binary),
-    <<?REQUEST_MAGIC>>.
-
-%%--------------------------------------------------------------------
-%% Function: cas(Key, Expiration, Data, Unique, Opts) -> Binary
-%% @doc
-%%   
-%% @end
-%%--------------------------------------------------------------------
--spec cas(key(), expiration(), data(), binary(), #opts{}) -> binary().
-%%--------------------------------------------------------------------
-cas(Key, Expiration, Data, Unique = <<_:64>>, Opts = #opts{protocol = text}) ->
-    Payload = term_to_binary(Data, [compressed]),
-    iolist_to_binary(
-      [<<"cas">>, ?SEPARATOR,
-       encode_key(Key, text), ?SEPARATOR,
-       encode_flags(Opts, text),
-       encode_expiration(Expiration, text), ?SEPARATOR,
-       byte_size(Payload), ?SEPARATOR,
-       Unique,
-       encode_noreply(Opts, text),
-       ?TERMINATOR,
-       Payload,
-       ?TERMINATOR
-      ]);
-cas(Key, _Expiration, _Data, _Unique = <<_:64>>, _Opts = #opts{protocol=binary}) ->
+storage(_Type, Key, _Expiration, _Data, _Opts = #opts{}) ->
     _EKey = encode_key(Key, binary),
     <<?REQUEST_MAGIC>>.
 
@@ -111,6 +98,15 @@ cas(Key, _Expiration, _Data, _Unique = <<_:64>>, _Opts = #opts{protocol=binary})
 %% ===================================================================
 %% Internal functions.
 %% ===================================================================
+
+header(Magic, OpCode, KeyLength, ExtrasLength, BodyLength, Opaque, CAS) ->
+    DataType = <<0:8>>, %% Reserved for future use
+    Reserved = <<0:16>>, %% Reserved for future use
+    <<Magic:8, OpCode:8, KeyLength:16,
+      ExtrasLength:8, DataType:8, Reserved:16,
+      BodyLength:32,
+      Opaque:32,
+      CAS:32>>.
 
 encode_key(_, _) -> <<>>.
 

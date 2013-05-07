@@ -25,10 +25,15 @@
               from :: undefined | jhn_server:from(),
               payload :: _}).
 
--record(opts, {protocol = text}).
+-record(opts, {opaque = <<0:32>> :: binary(),
+               cas = <<0:32>> :: binary(),
+               flags = <<>> :: binary(),
+               quiet = false :: boolean(),
+               key = false :: boolean()
+              }).
 
 %% Types
 -type key() :: _.
 -type data() :: _.
 -type expiration() :: _.
--type opt() :: _.
+-type opt() :: quiet | key | {cas, binary()}.
