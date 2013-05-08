@@ -82,9 +82,18 @@
 %%--------------------------------------------------------------------
 -spec storage(atom(), key(), expiration(), data(), #opts{}) -> binary().
 %%--------------------------------------------------------------------
-storage(_Type, Key, _Expiration, _Data, _Opts = #opts{}) ->
-    _EKey = encode_key(Key, binary),
-    <<?REQUEST_MAGIC>>.
+storage(Type, Key, Expiration, Data, Opts) ->
+    {Key1, KeyLength} = key(Key),
+    {Extras, ExtrasLength} = extras(Type, Expiration, Opts),
+    {Body, BodyLength} = body(Key1, Extras, Data),
+    Header = header(?REQUEST_MAGIC,
+                    opcode(Type),
+                    KeyLength,
+                    ExtrasLength,
+                    BodyLength,
+                    opaque(Opts),
+                    cas(Opts)),
+    <<Header/binary, Body/binary>>.
 
 %%--------------------------------------------------------------------
 %% Function: 
@@ -108,10 +117,20 @@ header(Magic, OpCode, KeyLength, ExtrasLength, BodyLength, Opaque, CAS) ->
       Opaque:32,
       CAS:32>>.
 
-encode_key(_, _) -> <<>>.
+key(Key) when is_binary(Key), byte_size(Key) =< 250 -> {Key, byte_size(Key)};
+key(Term) ->
+    case term_to_binary(Term, [compressed]) of
+        Binary when byte_size(Binary) =< 250 -> {Binary, byte_size(Binary)};
+        Binary -> {crypto:sha244(Binary), 244}
+    end.
 
-encode_flags(_, _) -> <<>>.
+extras(_, _, _) -> <<>>.
 
-encode_expiration(_, _) -> <<>>.
+body(_, _, _) -> <<>>.
 
-encode_noreply(_, _) -> <<>>.
+opcode(_) -> <<>>.
+
+opaque(#opts{opaque = Opaque}) -> Opaque.
+
+cas(#opts{cas = CAS}) -> CAS.
+

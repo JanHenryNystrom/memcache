@@ -23,6 +23,7 @@
 
 -record(req, {sync = false :: boolean(),
               from :: undefined | jhn_server:from(),
+              type ::atom(),
               payload :: _}).
 
 -record(opts, {opaque = <<0:32>> :: binary(),

@@ -34,7 +34,7 @@
 -export([enter/1, leave/1]).
 
 %% API
--export([request/2, sync_request/2]).
+-export([request/4, sync_request/4]).
 
 %% jhn_server callbacks
 -export([init/1,
@@ -103,9 +103,10 @@ leave(Name) -> catch exit(whereis(Name), leaving), ok.
 %%   
 %% @end
 %% ------------------------------------------------------------
--spec request(atom(), _) -> ok.
+-spec request(atom(), atom(), _, #opts{}) -> ok.
 %% ------------------------------------------------------------
-request(Name, Payload) -> jhn_server:cast(Name, #req{payload = Payload}).
+request(Name, Type, Payload, _Opts) ->
+    jhn_server:cast(Name, #req{payload = Payload, type = Type}).
 
 %%--------------------------------------------------------------------
 %% Function: 
@@ -113,10 +114,10 @@ request(Name, Payload) -> jhn_server:cast(Name, #req{payload = Payload}).
 %%   
 %% @end
 %% ------------------------------------------------------------
--spec sync_request(atom(), _) -> _.
+-spec sync_request(atom(), atom(), _, #opts{}) -> _.
 %% ------------------------------------------------------------
-sync_request(Name, Payload) ->
-    jhn_server:call(Name, #req{sync = true, payload = Payload}).
+sync_request(Name, Type, Payload, _Opts) ->
+    jhn_server:call(Name, #req{sync = true, payload = Payload, type = Type}).
 
 %% ===================================================================
 %% jhn_server callbacks

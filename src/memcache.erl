@@ -39,7 +39,9 @@
         ]).
 
 %% Retrieval
--export([get/2, get/3]).
+-export([get/2, get/3,
+         multi_get/2, multi_get/3
+        ]).
 
 %% Other
 -export([delete/2,
@@ -48,9 +50,8 @@
          quit/1,
          flush/2,
          noop/1,
-         version/1
-         %% ,
-         %% stats/0, stats/1
+         version/1,
+         stat/1, stat/2
         ]).
 
 %% Includes
@@ -119,7 +120,7 @@ set(Pool, Key, Expiration, Data) -> set(Pool, Key, Expiration, Data, []).
 set(Pool, Key, Expiration, Data, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request = memcache_protocol:storage(set, Key, Expiration, Data, OptsRecord),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, set, Request, OptsRecord).
 
 %%--------------------------------------------------------------------
 %% Function: add(Pool, Key, Expiration, Data) -> ok | Error.
@@ -142,7 +143,7 @@ add(Pool, Key, Expiration, Data) -> add(Pool, Key, Expiration, Data, []).
 add(Pool, Key, Expiration, Data, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request = memcache_protocol:storage(add, Key, Expiration, Data, OptsRecord),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, add, Request, OptsRecord).
 
 %%--------------------------------------------------------------------
 %% Function: replace(Pool, Key, Expiration, Data) -> ok | Error.
@@ -166,7 +167,7 @@ replace(Pool, Key, Expiration, Data, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request =
         memcache_protocol:storage(replace, Key, Expiration, Data, OptsRecord),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, replace, Request, OptsRecord).
 
 %%--------------------------------------------------------------------
 %% Function: append(Pool, Key, Expiration, Data) -> ok | Error.
@@ -190,7 +191,7 @@ append(Pool, Key, Expiration, Data, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request =
         memcache_protocol:storage(append, Key, Expiration, Data, OptsRecord),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, append, Request, OptsRecord).
 
 %%--------------------------------------------------------------------
 %% Function: prepend(Pool, Key, Expiration, Data) -> ok | Error.
@@ -214,34 +215,62 @@ prepend(Pool, Key, Expiration, Data, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request =
         memcache_protocol:storage(prepend, Key, Expiration, Data, OptsRecord),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, prepend, Request, OptsRecord).
 
 %% -------------------------------------------------------------------
 %% Retrieval
 %% -------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
-%% Function: get(Pool, Keys) -> {ok, Data} | Error
+%% Function: get(Pool, Key) -> {ok, Data} | Error
 %% @doc
 %%   
 %% @end
 %%--------------------------------------------------------------------
--spec  get(atom(), [key()])-> {ok, data()} | {error, _}.
+-spec  get(atom(), key())-> {ok, data()} | {error, _}.
 %%--------------------------------------------------------------------
-get(Pool, Keys) -> get(Pool, Keys, []).
+get(Pool, Key) -> get(Pool, Key, []).
 
 %%--------------------------------------------------------------------
-%% Function: get(Pool, Keys, Options) -> {ok, Data} | Error
+%% Function: get(Pool, Key, Options) -> {ok, Data} | Error
 %% @doc
 %%   
 %% @end
 %%--------------------------------------------------------------------
--spec  get(atom(), [key()], [opt()])-> {ok, data()} | {error, _}.
+-spec  get(atom(), key(), [opt()])-> {ok, data()} | {error, _}.
 %%--------------------------------------------------------------------
 get(Pool, Keys, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request = memcache_protocol:retrieval(get, Keys, OptsRecord),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, get, Request, OptsRecord).
+
+%%--------------------------------------------------------------------
+%% Function: multi_get(Pool, Keys) -> {ok, Data} | Error
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec  multi_get(atom(), [key()])-> {ok, data()} | {error, _}.
+%%--------------------------------------------------------------------
+multi_get(Pool, Key) -> multi_get(Pool, Key, []).
+
+%%--------------------------------------------------------------------
+%% Function: multi_get(Pool, Keys, Options) -> {ok, Data} | Error
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec  multi_get(atom(), [key()], [opt()])-> {ok, data()} | {error, _}.
+%%--------------------------------------------------------------------
+multi_get(Pool, Keys, Opts) ->
+    OptsRecord = parse_opts(Opts),
+    Quietly = OptsRecord#opts{quiet = true},
+    [
+     begin
+         Request = memcache_protocol:retrieval(get, Keys, Quietly),
+         memcache_pool_master:request(Pool, get, Request, Quietly)
+     end || Key <- Keys],
+    noop(Pool).
 
 %% -------------------------------------------------------------------
 %% Other
@@ -257,6 +286,7 @@ get(Pool, Keys, Opts) ->
 %%--------------------------------------------------------------------
 delete(Pool, Keys) ->
     [memcache_pool_master:request(Pool,
+                                  delete,
                                   memcache_protocol:delete(Key),
                                   #opts{}) ||
         Key <- Keys].
@@ -286,7 +316,7 @@ incr(Pool, Key, Delta, Initial, Expiration, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request =
         memcache_protocol:change(incr, Key, Delta, Initial, Expiration, Opts),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, incr, Request, OptsRecord).
 
 %%--------------------------------------------------------------------
 %% Function: decr(Pool, Key, Delta, Initial, Expiration) -> ok | Error.
@@ -313,7 +343,7 @@ decr(Pool, Key, Delta, Initial, Expiration, Opts) ->
     OptsRecord = parse_opts(Opts),
     Request =
         memcache_protocol:change(decr, Key, Delta, Initial, Expiration, Opts),
-    memcache_pool_master:request(Pool, Request, OptsRecord).
+    memcache_pool_master:request(Pool, decr, Request, OptsRecord).
 
 %%--------------------------------------------------------------------
 %% Function: quit(Pool) -> ok.
@@ -324,7 +354,7 @@ decr(Pool, Key, Delta, Initial, Expiration, Opts) ->
 -spec  quit(atom()) -> ok.
 %%--------------------------------------------------------------------
 quit(Pool) ->
-    memcache_pool_master:request(Pool, memcache_protocol:quit(), #opts{}).
+    memcache_pool_master:request(Pool, quit, memcache_protocol:quit(), #opts{}).
 
 %%--------------------------------------------------------------------
 %% Function: flush(Pool, Expiration) -> ok.
@@ -336,6 +366,7 @@ quit(Pool) ->
 %%--------------------------------------------------------------------
 flush(Pool, Expiration) ->
     memcache_pool_master:request(Pool,
+                                 flush,
                                  memcache_protocol:flush(Expiration),
                                  #opts{}).
 
@@ -348,10 +379,10 @@ flush(Pool, Expiration) ->
 -spec  noop(atom()) -> ok.
 %%--------------------------------------------------------------------
 noop(Pool) ->
-    memcache_pool_master:request(Pool, memcache_protocol:noop(), #opts{}).
+    memcache_pool_master:request(Pool, noop, memcache_protocol:noop(), #opts{}).
 
 %%--------------------------------------------------------------------
-%% Function: noop(Pool) -> ok.
+%% Function: version(Pool) -> ok.
 %% @doc
 %%   
 %% @end
@@ -359,16 +390,33 @@ noop(Pool) ->
 -spec  version(atom()) -> ok.
 %%--------------------------------------------------------------------
 version(Pool) ->
-    memcache_pool_master:request(Pool, memcache_protocol:version(), #opts{}).
+    memcache_pool_master:request(Pool,
+                                 version,
+                                 memcache_protocol:version(), #opts{}).
 
 %%--------------------------------------------------------------------
-%% Function: 
+%% Function: stat(Pool) -> ok.
 %% @doc
 %%   
 %% @end
 %%--------------------------------------------------------------------
-%-spec  -> .
+-spec  stat(atom()) -> ok.
 %%--------------------------------------------------------------------
+stat(Pool) ->
+    memcache_pool_master:request(Pool, stat, memcache_protocol:stat(), #opts{}).
+
+%%--------------------------------------------------------------------
+%% Function: stat(Pool) -> ok.
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec  stat(atom(), key()) -> ok.
+%%--------------------------------------------------------------------
+stat(Pool, Key) ->
+    memcache_pool_master:request(Pool,
+                                 stat,
+                                 memcache_protocol:stat(Key), #opts{}).
 
 %% ===================================================================
 %% Internal functions.
