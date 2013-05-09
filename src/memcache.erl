@@ -39,8 +39,7 @@
         ]).
 
 %% Retrieval
--export([get/2, get/3,
-         multi_get/2, multi_get/3
+-export([get/2, get/3
         ]).
 
 %% Other
@@ -240,37 +239,20 @@ get(Pool, Key) -> get(Pool, Key, []).
 -spec  get(atom(), key(), [opt()])-> {ok, data()} | {error, _}.
 %%--------------------------------------------------------------------
 get(Pool, Keys, Opts) ->
-    OptsRecord = parse_opts(Opts),
-    Request = memcache_protocol:retrieval(get, Keys, OptsRecord),
-    memcache_pool_master:request(Pool, get, Request, OptsRecord).
-
-%%--------------------------------------------------------------------
-%% Function: multi_get(Pool, Keys) -> {ok, Data} | Error
-%% @doc
-%%   
-%% @end
-%%--------------------------------------------------------------------
--spec  multi_get(atom(), [key()])-> {ok, data()} | {error, _}.
-%%--------------------------------------------------------------------
-multi_get(Pool, Key) -> multi_get(Pool, Key, []).
-
-%%--------------------------------------------------------------------
-%% Function: multi_get(Pool, Keys, Options) -> {ok, Data} | Error
-%% @doc
-%%   
-%% @end
-%%--------------------------------------------------------------------
--spec  multi_get(atom(), [key()], [opt()])-> {ok, data()} | {error, _}.
-%%--------------------------------------------------------------------
-multi_get(Pool, Keys, Opts) ->
-    OptsRecord = parse_opts(Opts),
-    Quietly = OptsRecord#opts{quiet = true},
-    [
-     begin
-         Request = memcache_protocol:retrieval(get, Keys, Quietly),
-         memcache_pool_master:request(Pool, get, Request, Quietly)
-     end || Key <- Keys],
-    noop(Pool).
+    case parse_opts(Opts) of
+        OptsRecord = #opts{multi = true} ->
+            OptsRecord = parse_opts(Opts),
+            Quietly = OptsRecord#opts{quiet = true},
+            [
+             begin
+                 Request = memcache_protocol:retrieval(get, Key, Quietly),
+                 memcache_pool_master:request(Pool, get, Request, Quietly)
+             end || Key <- Keys],
+            noop(Pool);
+        OptsRecord ->
+            Request = memcache_protocol:retrieval(get, Keys, OptsRecord),
+            memcache_pool_master:request(Pool, get, Request, OptsRecord)
+    end.
 
 %% -------------------------------------------------------------------
 %% Other
@@ -422,4 +404,12 @@ stat(Pool, Key) ->
 %% Internal functions.
 %% ===================================================================
 
-parse_opts(_) -> #opts{}.
+parse_opts(Opts) ->
+    lists:foldr(fun(Opt, Acc) -> parse_opt(Opt, Acc) end, #opts{}, Opts).
+
+parse_opt(quiet, Opts) -> Opts#opts{quiet = true};
+parse_opt(multi, Opts) -> Opts#opts{quiet = multi};
+parse_opt({flags, Flags}, Opts) when is_binary(Flags), byte_size(Flags) == 4 ->
+    Opts#opts{flags = Flags};
+parse_opt({cas, CAS}, Opts) -> Opts#opts{cas = CAS};
+parse_opt({opaque, Opaque}, Opts) -> Opts#opts{opaque = Opaque}.

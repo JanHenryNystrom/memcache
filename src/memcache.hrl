@@ -26,11 +26,14 @@
               type ::atom(),
               payload :: _}).
 
--record(opts, {opaque = <<0:32>> :: binary(),
+-record(opts, {quiet = false :: boolean(),
+               multi = false :: boolean(),
+               opaque = <<0:32>> :: binary(),
                cas = <<0:32>> :: binary(),
                flags = <<>> :: binary(),
-               quiet = false :: boolean(),
-               key = false :: boolean()
+               key = false :: boolean(),
+               delta  = 0 ::  integer(),
+               initial = 0 :: pos_integer()
               }).
 
 %% Types
