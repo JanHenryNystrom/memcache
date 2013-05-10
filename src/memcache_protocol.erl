@@ -187,9 +187,6 @@ body(prepend, Key, <<>>, Value) -> <<Key/binary, Value/binary>>;
 body(stat, <<>>, <<>>, <<>>) -> <<>>;
 body(stat, Key, <<>>, <<>>) -> Key.
 
-
-
-
 opcode(get, #opts{quiet = false}) -> ?GET;
 opcode(get, #opts{quiet = true}) -> ?GETQ;
 opcode(set, #opts{quiet = false}) -> ?SET;
@@ -220,3 +217,20 @@ opaque(#opts{opaque = Opaque}) -> Opaque.
 
 cas(#opts{cas = CAS}) -> CAS.
 
+parse(Message, OpCode) ->
+    case Message of
+        <<?RESPONSE_MAGIC:8, OpCode:8, KeyLength:16,
+          ExtrasLength:8, _DataType:8, 0:16/unsigned,
+          BodyLength:32, Opaque:32, CAS:32, T/binary>> ->
+            ValueLength = BodyLength - ExtrasLength - KeyLength,
+            <<Extras:ExtrasLength/bytes,
+              Key:KeyLength/bytes,
+              Value:ValueLength/bytes>> = T,
+            {ok, Opaque, CAS, Key, Extras, Value};
+        <<?RESPONSE_MAGIC:8, OpCode:8, _KeyLength:16,
+          ExtrasLength:8, _DataType:8, Status:16/unsigned,
+          BodyLength:32, _Opaque:32, _CAS:32, T/binary>> ->
+            ErrorMsgLength = BodyLength - ExtrasLength,
+            <<_:ExtrasLength/bytes, ErrorMsg:ErrorMsgLength/bytes>> = T,
+            {error, Status, ErrorMsg}
+    end.
