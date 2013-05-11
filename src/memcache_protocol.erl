@@ -123,7 +123,6 @@ request(Type, Key, Expiration, Value, Opts) ->
     Body = body(Type, Key1, Extras, Value),
     <<Header/binary, Body/binary>>.
 
-
 header(Magic, OpCode, KeyLength, ExtrasLength, BodyLength, Opaque, CAS) ->
     DataType = <<0:8>>, %% Reserved for future use
     Reserved = <<0:16>>, %% Reserved for future use
@@ -140,7 +139,7 @@ key(Term) ->
         Binary -> {crypto:sha244(Binary), 244}
     end.
 
-extras(get, <<>>, _) -> {<<>>, 0};
+extras(get, _, _) -> {<<>>, 0};
 extras(set, Expiration, #opts{flags = Flags}) ->
     {<<Flags/binary, Expiration:32>>, 64};
 extras(add, Expiration, #opts{flags = Flags}) ->
@@ -170,23 +169,6 @@ extras(prepend, _, _) ->
 extras(stat, _, _) ->
     {<<>>, 0}.
 
-
-body(get, Key, <<>>, <<>>) -> Key;
-body(set, Key, Extras, Value) -> <<Extras/binary, Key/binary, Value/binary>>;
-body(add, Key, Extras, Value) -> <<Extras/binary, Key/binary, Value/binary>>;
-body(replace, Key, Extras, Value) -> <<Extras/binary, Key/binary,Value/binary>>;
-body(delete, Key, <<>>, <<>>) -> Key;
-body(incr, Key, Extras, <<>>) -> <<Extras/binary, Key/binary>>;
-body(decr, Key, Extras, <<>>) -> <<Extras/binary, Key/binary>>;
-body(quit, <<>>, <<>>, <<>>) -> <<>>;
-body(flush, <<>>, Extras, <<>>) -> Extras;
-body(noop, <<>>, <<>>, <<>>) -> <<>>;
-body(version, <<>>, <<>>, <<>>) -> <<>>;
-body(append, Key, <<>>, Value) -> <<Key/binary, Value/binary>>;
-body(prepend, Key, <<>>, Value) -> <<Key/binary, Value/binary>>;
-body(stat, <<>>, <<>>, <<>>) -> <<>>;
-body(stat, Key, <<>>, <<>>) -> Key.
-
 opcode(get, #opts{quiet = false}) -> ?GET;
 opcode(get, #opts{quiet = true}) -> ?GETQ;
 opcode(set, #opts{quiet = false}) -> ?SET;
@@ -212,6 +194,22 @@ opcode(append, #opts{quiet = true}) -> ?APPENDQ;
 opcode(prepend, #opts{quiet = false}) -> ?PREPEND;
 opcode(prepend, #opts{quiet = true}) -> ?PREPENDQ;
 opcode(stat, _) -> ?STAT.
+
+body(get, Key, <<>>, <<>>) -> Key;
+body(set, Key, Extras, Value) -> <<Extras/binary, Key/binary, Value/binary>>;
+body(add, Key, Extras, Value) -> <<Extras/binary, Key/binary, Value/binary>>;
+body(replace, Key, Extras, Value) -> <<Extras/binary, Key/binary,Value/binary>>;
+body(delete, Key, <<>>, <<>>) -> Key;
+body(incr, Key, Extras, <<>>) -> <<Extras/binary, Key/binary>>;
+body(decr, Key, Extras, <<>>) -> <<Extras/binary, Key/binary>>;
+body(quit, <<>>, <<>>, <<>>) -> <<>>;
+body(flush, <<>>, Extras, <<>>) -> Extras;
+body(noop, <<>>, <<>>, <<>>) -> <<>>;
+body(version, <<>>, <<>>, <<>>) -> <<>>;
+body(append, Key, <<>>, Value) -> <<Key/binary, Value/binary>>;
+body(prepend, Key, <<>>, Value) -> <<Key/binary, Value/binary>>;
+body(stat, <<>>, <<>>, <<>>) -> <<>>;
+body(stat, Key, <<>>, <<>>) -> Key.
 
 opaque(#opts{opaque = Opaque}) -> Opaque.
 
